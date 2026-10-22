@@ -251,19 +251,20 @@ test('seen turns done into idle; labels apply only to the current cwd', () => {
   assert.strictEqual(l.row.branch, 'main');
 });
 
-test('summarize orders by urgency and hides non-terminal sessions unless asked', () => {
+test('summarize orders by urgency and hides SDK runs unless asked', () => {
   const s = {
     1: { pid: 1, state: 'idle', entrypoint: 'cli', lastActivity: 9 },
     2: { pid: 2, state: 'needs', entrypoint: 'cli', lastActivity: 1 },
     3: { pid: 3, state: 'done', entrypoint: 'cli', lastActivity: 5 },
     4: { pid: 4, state: 'needs', entrypoint: 'claude-desktop', lastActivity: 5 },
     5: { pid: 5, state: 'ended', entrypoint: 'cli', lastActivity: 5 },
+    6: { pid: 6, state: 'done', entrypoint: 'sdk-cli', lastActivity: 7 },
   };
   const sum = summarize(s, false);
-  assert.deepStrictEqual(sum.rows.map((r) => r.pid), [2, 3, 1]);
-  assert.strictEqual(sum.badge, 2);
+  assert.deepStrictEqual(sum.rows.map((r) => r.pid), [4, 2, 3, 1]);
+  assert.strictEqual(sum.badge, 3);
   assert.strictEqual(sum.top, 'needs');
-  assert.strictEqual(summarize(s, true).total, 4);
+  assert.strictEqual(summarize(s, true).total, 5);
 });
 
 test('labels and state lines read well', () => {
@@ -308,4 +309,11 @@ test('forget hides a live session until its next prompt and drops an ended one',
   const ended = run([hook('SessionEnd', 10000), { type: 'forget', pid: PID }], back.sessions);
   assert.strictEqual(ended.row, undefined);
   assert.strictEqual(run([{ type: 'forget', pid: 1 }]).effects.length, 0);
+});
+
+test('a Claude Desktop session keeps the id its claude:// link needs', () => {
+  const entry = { pid: PID, sessionId: 's1', entrypoint: 'claude-desktop', hostSessionId: 'local_abc-123', startedAt: 1 };
+  const { row } = run([reg([entry], 1000)]);
+  assert.strictEqual(row.entrypoint, 'claude-desktop');
+  assert.strictEqual(row.hostSessionId, 'local_abc-123');
 });

@@ -83,9 +83,19 @@ test('sameStart allows a second of slack and passes when there is nothing to com
   assert.strictEqual(f.sameStart('garbage', at), true);
 });
 
+test('desktopLink opens a Claude Desktop session by its id, and nothing else', () => {
+  const row = { pid: 1, entrypoint: 'claude-desktop', hostSessionId: 'local_f8746d1a-0ad8-4ffa-8bda-9fd7ca8189ab' };
+  assert.strictEqual(f.desktopLink(row), 'claude://code/continue?session=local_f8746d1a-0ad8-4ffa-8bda-9fd7ca8189ab');
+  assert.strictEqual(f.desktopLink({ ...row, entrypoint: 'cli' }), null);
+  assert.strictEqual(f.desktopLink({ ...row, hostSessionId: undefined }), null);
+  assert.strictEqual(f.desktopLink({ ...row, hostSessionId: 'local_a&b' }), null);
+  assert.strictEqual(f.desktopLink(null), null);
+});
+
 test('describeTab words the answer for the log', () => {
   assert.strictEqual(f.describeTab(undefined), '');
   assert.strictEqual(f.describeTab({ ok: true, tty: 'ttys003' }), 'tab on ttys003');
+  assert.strictEqual(f.describeTab({ ok: true, link: 'claude://code/continue?session=local_1' }), 'opened claude://code/continue?session=local_1');
   assert.strictEqual(f.describeTab({ ok: false, reason: 'no tab on ttys003' }), 'tab not switched: no tab on ttys003');
 });
 

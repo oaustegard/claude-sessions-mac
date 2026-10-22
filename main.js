@@ -285,7 +285,7 @@ function buildMenu() {
     submenu: dndItems(now),
   });
   items.push({
-    label: 'Show desktop and SDK sessions',
+    label: 'Show SDK and background sessions',
     type: 'checkbox',
     checked: config.showAll,
     click: (item) => { config.showAll = item.checked; configChanged(); },

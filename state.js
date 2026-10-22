@@ -220,6 +220,7 @@ function applyRegistry(out, snapshot, now, effects) {
     if (e.entrypoint) row.entrypoint = e.entrypoint;
     if (e.startedAt) row.startedAt = e.startedAt;
     if (e.procStart) row.procStart = e.procStart;
+    if (e.hostSessionId) row.hostSessionId = e.hostSessionId;
     if (e.version) row.version = e.version;
     row.name = e.name && e.nameSource && e.nameSource !== 'derived' ? e.name : undefined;
     row.regName = e.name || undefined; // Claude Code puts it in the terminal title, so focus matches on it
@@ -321,8 +322,11 @@ function reduce(sessions, input) {
 
 // ---------------------------------------------------------------- display
 
+// Sessions with a window you work in: terminal runs and Claude Desktop's Code tab.
+const FOREGROUND = new Set(['cli', 'claude-desktop']);
+
 function isVisible(row, showAll) {
-  return !row.hidden && (showAll || !row.entrypoint || row.entrypoint === 'cli');
+  return !row.hidden && (showAll || !row.entrypoint || FOREGROUND.has(row.entrypoint));
 }
 
 /** Remote Control bridges and SDK runs (`sdk-cli`, `sdk-py`) run with no window to show. */

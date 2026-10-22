@@ -11,6 +11,8 @@ const RESCAN_MS = 5000;
 const DEBOUNCE_MS = 150;
 
 const str = (v) => (typeof v === 'string' && v ? v : undefined);
+// Claude Desktop's own id for a Code-tab session, as its claude:// links take it.
+const HOST_ID_RE = /^local_[A-Za-z0-9-]{1,100}$/;
 const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : undefined);
 
 /** One registry file's text to a normalized entry, or null when it is unusable. */
@@ -30,6 +32,7 @@ function parseEntry(text, filePid) {
     version: str(o.version),
     kind: str(o.kind),
     entrypoint: str(o.entrypoint),
+    hostSessionId: HOST_ID_RE.test(o.hostSessionId) ? o.hostSessionId : undefined,
     name: str(o.name),
     nameSource: str(o.nameSource),
     status,

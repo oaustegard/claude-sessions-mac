@@ -18,7 +18,7 @@ test('rows come most urgent first, then ended ones dimmed at the bottom', () => 
     row(2, 'needs', { needsReason: 'Needs permission: Bash' }),
     row(3, 'ended', { endedAt: NOW - 60000, since: NOW - 60000 }),
     row(4, 'done', { project: 'site', branch: 'main' }),
-    row(5, 'idle', { entrypoint: 'claude-desktop' }),
+    row(5, 'idle', { entrypoint: 'sdk-py' }),
   );
   const m = popupModel({ sessions, config: config(), now: NOW });
   assert.deepStrictEqual(m.rows.map((r) => [r.key, r.state, r.dimmed]), [

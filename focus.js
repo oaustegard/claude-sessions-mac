@@ -128,6 +128,16 @@ function focusScript(kind, tty) {
   return null;
 }
 
+/**
+ * The claude:// link that opens a Claude Desktop Code session in the app, or
+ * null for any other session. Claude Desktop's dock menu builds the same link.
+ */
+function desktopLink(row) {
+  if (!row || row.entrypoint !== 'claude-desktop') return null;
+  if (!/^local_[A-Za-z0-9-]{1,100}$/.test(String(row.hostSessionId))) return null;
+  return `claude://code/continue?session=${row.hostSessionId}`;
+}
+
 /** ps's lstart text read in UTC ("Thu Oct 22 02:08:34 2026") to ms, or null. */
 function parseLstart(s) {
   const t = String(s || '').trim().replace(/\s+/g, ' ');
@@ -151,7 +161,7 @@ function sameStart(procStart, createdMs) {
 function describeTab(tab) {
   if (!tab) return '';
   if (!tab.ok) return `tab not switched: ${tab.reason || 'no reason given'}`;
-  return `tab on ${tab.tty}`;
+  return tab.link ? `opened ${tab.link}` : `tab on ${tab.tty}`;
 }
 
 // ---------------------------------------------------------------- shell
@@ -209,6 +219,12 @@ async function focusSession(row) {
   const pick = chooseApp(chain);
   if (!pick) return { ok: false, reason: `no window (${chain.map((p) => p.name).join(' < ') || 'no chain'})` };
   const title = path.basename(pick.app, '.app');
+  const link = desktopLink(row);
+  if (link) {
+    // Opens the app on that session; open -a below would show whichever was last.
+    const r = await run('/usr/bin/open', [link]);
+    if (r.ok) return { ok: true, via: pick.via, title, tab: { ok: true, link } };
+  }
   const tty = ttyOf(row.pid);
   const script = tty && focusScript(pick.kind, tty);
   let tab;
@@ -223,6 +239,6 @@ async function focusSession(row) {
 }
 
 module.exports = {
-  parsePs, ancestry, appBundle, chooseApp, focusScript, parseLstart, sameStart, describeTab,
+  parsePs, ancestry, appBundle, chooseApp, focusScript, desktopLink, parseLstart, sameStart, describeTab,
   nativeStatus, snapshot, createdAt, ttyOf, focusSession,
 };

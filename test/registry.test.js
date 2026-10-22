@@ -30,6 +30,14 @@ test('parseEntry reads the real shape', () => {
   assert.strictEqual(e.status, 'waiting');
   assert.strictEqual(e.statusUpdatedAt, 1760900005000);
   assert.strictEqual(e.nameSource, 'derived');
+  assert.strictEqual(e.hostSessionId, undefined);
+});
+
+test('parseEntry keeps a Claude Desktop session id and drops a malformed one', () => {
+  const desktop = { ...REAL, entrypoint: 'claude-desktop', hostSessionId: 'local_f8746d1a-0ad8-4ffa-8bda-9fd7ca8189ab' };
+  assert.strictEqual(parseEntry(JSON.stringify(desktop), 31337).hostSessionId, 'local_f8746d1a-0ad8-4ffa-8bda-9fd7ca8189ab');
+  assert.strictEqual(parseEntry(JSON.stringify({ ...desktop, hostSessionId: 'local_x&rm=1' }), 31337).hostSessionId, undefined);
+  assert.strictEqual(parseEntry(JSON.stringify({ ...desktop, hostSessionId: 42 }), 31337).hostSessionId, undefined);
 });
 
 test('parseEntry tolerates missing fields and rejects junk', () => {

@@ -18,11 +18,11 @@ Claude Sessions is an unofficial tool. It is not affiliated with or endorsed by 
   turn fails.
 - One menu bar icon whose colour is the most urgent session: amber needs
   you, red failed, green finished, blue working.
-- A popup listing every terminal session with its project, branch, first
-  prompt and state.
-- Clicking a session's row, its menu line or its notification brings its
-  terminal to the front. In Terminal and iTerm2 it also selects the
-  session's tab.
+- A popup listing every Claude Code session, in a terminal or in Claude
+  Desktop's Code tab, with its project, branch, first prompt and state.
+- Clicking a session's row, its menu line or its notification brings it to
+  the front. In Terminal and iTerm2 that selects the session's tab; in
+  Claude Desktop it opens that session.
 
 Everything stays on your Mac. The hooks talk to the app over `127.0.0.1`
 with a token, and nothing is sent anywhere else.
@@ -86,7 +86,8 @@ or pick a sound; click the icon again, press Esc or click elsewhere to close
 it.
 
 Right-click (or Control-click) opens the menu: one line per session, Do not
-disturb, a toggle for desktop-app and SDK sessions, Start at login, install
+disturb, a toggle for SDK and background sessions (`claude -p`, Agent SDK
+runs, Remote Control bridges), Start at login, install
 or remove hooks, the data folder, and quit. Opening the menu marks finished
 sessions as seen.
 
@@ -95,8 +96,8 @@ sessions as seen.
 The popup is 320 pt wide and follows the system light or dark appearance.
 
 - The header has the session counts, a bell for Do not disturb (30 minutes,
-  1 hour, until 08:00, off) and a gear for settings: volume, the desktop and
-  SDK toggle, Start at login, and the data folder.
+  1 hour, until 08:00, off) and a gear for settings: volume, the SDK and
+  background toggle, Start at login, and the data folder.
 - Rows are sorted most urgent first: needs you, failed, finished, working,
   idle. The three most recently ended sessions follow, dimmed.
 - Each row has a status dot, "project · branch" (or "project · alias" once
@@ -151,6 +152,10 @@ Settings, Notifications). A Focus mode can hide them too.
   runs a short AppleScript that finds the tab whose tty matches the
   session's and selects it. For any other app it runs `open -a`, which
   brings the app forward without picking a window.
+- A Claude Desktop session is opened with
+  `claude://code/continue?session=<id>`, the link Claude Desktop's own dock
+  menu uses. The id is the `hostSessionId` Claude Desktop writes into the
+  session's `~/.claude/sessions/<pid>.json`.
 
 ## Hooks
 
@@ -194,7 +199,9 @@ every push and pull request.
   forward as a whole app, showing whichever window was last in front.
 - Sessions over ssh or in a container have no app on this Mac to bring
   forward; clicking one marks it seen.
-- Claude desktop-app sessions bring the Claude app forward.
+- Opening a Claude Desktop session relies on an undocumented `claude://`
+  link. If a Claude Desktop update changes it, clicking brings the app
+  forward without switching sessions.
 - An idle session's time counts from when the app first saw it, not from its
   last turn.
 - `/clear` starts a new session id, so the session loses its alias, its own
