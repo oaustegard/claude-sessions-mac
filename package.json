@@ -20,10 +20,9 @@
     "dist": "electron-builder --mac"
   },
   "devDependencies": {
-    "electron": "33.4.11",
-    "electron-builder": "^25.1.8"
+    "electron": "45.0.0",
+    "electron-builder": "26.15.3"
   },
-  "dependencies": {},
   "build": {
     "appId": "com.austegard.claude-sessions-mac",
     "productName": "Claude Sessions",

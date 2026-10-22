@@ -47,8 +47,8 @@ npm install
 npm run dist
 ```
 
-Then open `dist/Claude Sessions-<version>-arm64.dmg` (or `-x64` on Intel)
-and drag the app to Applications. The app is signed ad hoc, not with a
+Then open `dist/Claude Sessions-<version>-arm64.dmg` (on Intel,
+`dist/Claude Sessions-<version>.dmg`) and drag the app to Applications. The app is signed ad hoc, not with a
 Developer ID, so the first open is blocked: right-click the app, choose
 **Open**, then **Open** again. On recent macOS you may instead have to allow
 it under System Settings, Privacy & Security.
