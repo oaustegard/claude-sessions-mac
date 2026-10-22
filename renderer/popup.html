@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:">
+<title>Claude Sessions</title>
+<link rel="stylesheet" href="popup.css">
+</head>
+<body>
+<div id="card" class="card" role="dialog" aria-label="Claude Sessions">
+
+  <section id="list-view" class="view">
+    <header class="head">
+      <span id="head-dot" class="dot"></span>
+      <div class="head-text">
+        <div id="head-title" class="head-title"></div>
+        <div id="head-counts" class="head-counts"></div>
+      </div>
+      <button id="dnd" class="icon-btn" type="button" title="Do not disturb">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path class="bell" d="M8 2.2a3.6 3.6 0 0 0-3.6 3.6v2.4L3.2 10.6h9.6L11.6 8.2V5.8A3.6 3.6 0 0 0 8 2.2zM6.6 12.4a1.4 1.4 0 0 0 2.8 0"/><path class="slash" d="M2.6 2.6l10.8 10.8"/></svg>
+        <span id="dnd-until" class="dnd-until"></span>
+      </button>
+      <button id="gear" class="icon-btn" type="button" title="Settings">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.1"/><path d="M8 1.8v1.6M8 12.6v1.6M1.8 8h1.6M12.6 8h1.6M3.6 3.6l1.15 1.15M11.25 11.25l1.15 1.15M3.6 12.4l1.15-1.15M11.25 4.75l1.15-1.15"/></svg>
+      </button>
+    </header>
+
+    <div id="banner" class="banner" hidden>
+      <span>Hooks are not installed, so there are no needs-you or done alerts.</span>
+      <button id="install" class="text-btn" type="button">Install</button>
+    </div>
+
+    <div id="rows" class="rows" role="list"></div>
+
+    <div id="empty" class="empty" hidden>
+      <div class="empty-title">No Claude Code sessions</div>
+      <div class="empty-sub">Start <code>claude</code> in a terminal and it shows up here.</div>
+    </div>
+  </section>
+
+  <section id="picker-view" class="view" hidden>
+    <header class="head sub">
+      <button id="picker-back" class="icon-btn" type="button" title="Back">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3L5 8l5 5"/></svg>
+      </button>
+      <div class="head-text">
+        <div class="head-title">Sound</div>
+        <div id="picker-for" class="head-counts"></div>
+      </div>
+      <button id="add-sound" class="text-btn" type="button">Add sound…</button>
+    </header>
+    <div id="scope" class="scope" role="radiogroup" aria-label="Who gets this sound">
+      <button type="button" data-scope="session" role="radio">This session</button>
+      <button type="button" data-scope="project" role="radio" id="scope-project">Project</button>
+    </div>
+    <div id="picker-note" class="picker-note"></div>
+    <div id="sound-notice" class="picker-note sound-notice" role="status"></div>
+    <div id="sounds" class="sounds"></div>
+  </section>
+
+  <section id="settings-view" class="view" hidden>
+    <header class="head sub">
+      <button id="settings-back" class="icon-btn" type="button" title="Back">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3L5 8l5 5"/></svg>
+      </button>
+      <div class="head-text"><div class="head-title">Settings</div></div>
+    </header>
+    <div class="settings">
+      <label class="setting">
+        <span class="setting-name">Volume</span>
+        <input id="volume" type="range" min="0" max="100" step="5">
+        <span id="volume-text" class="setting-value"></span>
+      </label>
+      <label class="setting check">
+        <input id="show-all" type="checkbox">
+        <span>Show desktop and SDK sessions</span>
+      </label>
+      <label class="setting check">
+        <input id="open-at-login" type="checkbox">
+        <span>Start at login</span>
+      </label>
+      <div class="setting links">
+        <button id="data-folder" class="text-btn" type="button">Open data folder</button>
+      </div>
+    </div>
+  </section>
+
+</div>
+<script src="popup.js"></script>
+</body>
+</html>

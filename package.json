@@ -1,0 +1,68 @@
+{
+  "name": "claude-sessions-mac",
+  "productName": "Claude Sessions",
+  "version": "0.1.0",
+  "description": "Menu bar app that tracks running Claude Code terminal sessions on macOS and alerts when one is done or needs you.",
+  "main": "main.js",
+  "author": "Oskar Austegard (macOS port); Dr. Know How (original Windows app)",
+  "homepage": "https://github.com/oaustegard/claude-sessions-mac",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/oaustegard/claude-sessions-mac.git"
+  },
+  "bugs": "https://github.com/oaustegard/claude-sessions-mac/issues",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test \"test/**/*.test.js\"",
+    "icon": "node scripts/make-icon.js",
+    "dist": "electron-builder --mac"
+  },
+  "devDependencies": {
+    "electron": "33.4.11",
+    "electron-builder": "^25.1.8"
+  },
+  "dependencies": {},
+  "build": {
+    "appId": "com.austegard.claude-sessions-mac",
+    "productName": "Claude Sessions",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "*.js",
+      "!.*",
+      "renderer/**",
+      "reporter/**",
+      "build/**",
+      "package.json"
+    ],
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "category": "public.app-category.developer-tools",
+      "identity": null,
+      "extendInfo": {
+        "LSUIElement": true,
+        "NSAppleEventsUsageDescription": "Claude Sessions selects the Terminal or iTerm2 tab a session runs in when you click it."
+      }
+    },
+    "afterPack": "scripts/adhoc-sign.js"
+  }
+}
