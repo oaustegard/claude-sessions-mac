@@ -136,7 +136,6 @@ function makeRow(key) {
   const folder = tool('reveal', folderIcon(), () => api.openFolder(key));
   folder.title = 'Open its folder';
   const expand = tool('expand', expandIcon(), () => showWindow(key));
-  expand.title = 'Show its terminal window';
   const more = tool('more', moreIcon(), () => api.rowMenu(key));
   more.title = 'More';
   const tools = el('div', 'row-tools');
@@ -188,6 +187,7 @@ function updateRow(p, r) {
   if (!p.copiedTimer) p.copy.title = `Copy ${r.resume}`;
   p.folder.hidden = !r.cwd;
   p.expand.hidden = r.dimmed || r.background; // ended and background sessions have no window to show
+  p.expand.title = r.desktop ? 'Open it in Claude' : 'Show its terminal window';
 
   p.chip.hidden = r.dimmed;
   p.chip.classList.toggle('muted', r.muted);

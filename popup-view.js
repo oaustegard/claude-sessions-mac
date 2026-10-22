@@ -26,6 +26,7 @@ function rowModel(row, config, catalog, now, dimmed) {
     cwd: row.cwd || '',
     dimmed,
     background: state.isBackground(row),
+    desktop: row.entrypoint === 'claude-desktop',
   };
 }
 

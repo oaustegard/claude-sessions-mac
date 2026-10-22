@@ -114,3 +114,9 @@ test('only the newest ended sessions are listed', () => {
   assert.deepStrictEqual(m.rows.map((r) => r.key), ['10', '11', '12']);
   assert.ok(m.rows.every((r) => r.dimmed));
 });
+
+test('a Claude Desktop row says so, so its button can name the app', () => {
+  const sessions = bySessions(row(1, 'idle', { entrypoint: 'claude-desktop' }), row(2, 'idle', { entrypoint: 'cli' }));
+  const m = popupModel({ sessions, config: config(), now: NOW });
+  assert.deepStrictEqual(m.rows.map((r) => [r.key, r.desktop]).sort(), [['1', true], ['2', false]]);
+});

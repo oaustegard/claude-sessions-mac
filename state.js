@@ -122,7 +122,7 @@ function applyHook(out, ev, replay, effects) {
     case 'UserPromptSubmit':
       if (ev.prompt) {
         row.lastPrompt = ev.prompt;
-        if (!row.firstPrompt) row.firstPrompt = ev.prompt;
+        if (!row.firstPrompt && !isInjected(ev.prompt)) row.firstPrompt = ev.prompt;
       }
       row.pending = [];
       row.hidden = undefined; // a forgotten session comes back when you use it
@@ -222,7 +222,9 @@ function applyRegistry(out, snapshot, now, effects) {
     if (e.procStart) row.procStart = e.procStart;
     if (e.hostSessionId) row.hostSessionId = e.hostSessionId;
     if (e.version) row.version = e.version;
-    row.name = e.name && e.nameSource && e.nameSource !== 'derived' ? e.name : undefined;
+    // A derived name is a slug of the folder; any other is a real title.
+    // Claude Desktop writes its titles with no nameSource at all.
+    row.name = e.name && e.nameSource !== 'derived' ? e.name : undefined;
     row.regName = e.name || undefined; // Claude Code puts it in the terminal title, so focus matches on it
 
     // The registry status is a hint: it applies only when it is newer than the
@@ -374,6 +376,15 @@ function clipText(s, n) {
  * An alias you set takes the branch's place, "shop · my alias", so a long
  * project and branch can't push it out of sight.
  */
+/**
+ * True for a prompt the app wrote rather than the person: Claude Desktop
+ * submits background-task results and similar as XML-tagged turns, such as
+ * "<task-notification> …". Those make a poor session name.
+ */
+function isInjected(prompt) {
+  return /^\s*<[a-z][\w-]*[\s>]/i.test(String(prompt || ''));
+}
+
 function rowLabel(row, alias) {
   const folder = row.cwd ? row.cwd.split(/[\\/]/).filter(Boolean).pop() : '';
   if (alias) {

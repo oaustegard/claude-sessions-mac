@@ -209,6 +209,20 @@ test('a session that started before the hooks shows up from the registry', () =>
   assert.deepStrictEqual(r.effects.filter((e) => e.type === 'needLabels'), [{ type: 'needLabels', pid: PID, cwd: 'U:\\proj' }]);
   const derived = run([reg([{ pid: 7, cwd: 'U:\\p', status: 'idle', name: 'p-ab', nameSource: 'derived' }], 1000)]);
   assert.strictEqual(derived.sessions['7'].name, undefined);
+  // Claude Desktop writes its title with no nameSource.
+  const desktop = run([reg([{ pid: 8, cwd: '/p', entrypoint: 'claude-desktop', name: 'Ettin query embedder optimization' }], 1000)]);
+  assert.strictEqual(desktop.sessions['8'].name, 'Ettin query embedder optimization');
+});
+
+test('a prompt the app injected does not become the session name', () => {
+  const r = run([
+    hook('UserPromptSubmit', 1000, { prompt: '<task-notification> <task-id>b1</task-id> done' }),
+    hook('UserPromptSubmit', 2000, { prompt: 'speed up the embedder' }),
+  ]);
+  assert.strictEqual(r.row.firstPrompt, 'speed up the embedder');
+  assert.strictEqual(r.row.lastPrompt, 'speed up the embedder');
+  const lt = run([hook('UserPromptSubmit', 1000, { prompt: 'is a < b here?' })]);
+  assert.strictEqual(lt.row.firstPrompt, 'is a < b here?');
 });
 
 test('a vanished registry file ends the row after 3 s; a dead pid ends it at once', () => {
