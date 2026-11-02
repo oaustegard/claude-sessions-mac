@@ -36,21 +36,26 @@ You need:
 
 - macOS 11 or later, on Apple Silicon or Intel.
 - [Claude Code](https://github.com/anthropics/claude-code), run in a terminal.
-- [Node.js](https://nodejs.org/) with npm. CI builds and tests with Node 22;
-  use that or later. The hooks also run a small Node script. The app looks
+- [Node.js](https://nodejs.org/) 22 or later, with npm. The app installs
+  hooks into Claude Code's settings that run a small Node script to report
+  each session's events to it. The app looks
   for `node` in `/opt/homebrew/bin`, `/usr/local/bin` and `/usr/bin`, then
   asks your login shell, which covers nvm and similar.
 
 ### Get the source
 
-Clone the repository, or download "Source code (zip)" from the
-[latest release](https://github.com/oaustegard/claude-sessions-mac/releases/latest)
-and unpack it. In a terminal:
+Download "Source code (zip)" from the
+[latest release](https://github.com/oaustegard/claude-sessions-mac/releases/latest),
+unpack it and `cd` into the folder. Or clone a release tag with git (on a
+fresh Mac, `git` first offers to install the Command Line Tools):
 
 ```bash
-git clone https://github.com/oaustegard/claude-sessions-mac.git
+git clone --branch v0.2.0 https://github.com/oaustegard/claude-sessions-mac.git
 cd claude-sessions-mac
 ```
+
+Cloning without `--branch` gets `main`, which may be ahead of the latest
+release.
 
 ### Build and install
 
@@ -60,7 +65,8 @@ npm test           # optional: runs the unit tests
 npm run dist       # builds the app into dist/
 ```
 
-`npm run dist` writes a DMG and a zip for each architecture to `dist/`:
+`npm run dist` builds for both Apple Silicon and Intel in one run and
+writes a DMG and a zip for each to `dist/`:
 `Claude Sessions-<version>-arm64.dmg` for Apple Silicon and
 `Claude Sessions-<version>.dmg` for Intel. Open the one for your Mac and
 drag the app to Applications. To skip the DMG, copy the app from
@@ -75,14 +81,8 @@ The build signs the app ad hoc, not with a Developer ID. If macOS blocks
 the first open, right-click the app, choose **Open**, then **Open** again,
 or allow it under System Settings, Privacy & Security.
 
-To try the app without building it, run `npm start` in the source folder.
-It runs until you quit it from the menu.
-
-### Upgrade
-
-Quit the running app from its menu, build the new version as above, and
-replace the app in Applications. At start the new version updates the hooks
-an older version installed, so you do not need to reinstall them.
+To try the app without packaging it, run `npm install` and then
+`npm start` in the source folder. It runs until you quit it from the menu.
 
 ### First run
 
@@ -93,14 +93,25 @@ an older version installed, so you do not need to reinstall them.
    source folder does the same.
 2. Turn on **Start at login** in the same menu if you want the app to start
    when you log in. It is off until you turn it on.
-3. The first time you click a session that runs in Terminal or iTerm2,
+3. The first time you click a session's row in the popup, for a session that runs in Terminal or iTerm2,
    macOS asks whether Claude Sessions may control that app. Allow it so the
-   app can select the session's tab. If you decline, the app still comes
-   forward; you can change the answer later in System Settings, Privacy &
+   app can select the session's tab. If you decline, Terminal or iTerm2
+   still comes forward; you can change the answer later in System Settings, Privacy &
    Security, Automation.
 
-To uninstall, remove the hooks and turn off Start at login from the menu,
-quit, and delete the app. Its data is in
+### Upgrade
+
+Quit the running app from its menu. Get the new source: download the new
+release's zip, or in your clone run `git fetch --tags` and
+`git checkout <new tag>`. Build and copy the app as above, then open it. At
+start it updates the hooks an older version installed, so you do not need
+to reinstall them.
+
+### Uninstall
+
+Choose **Remove hooks from Claude Code** and turn off **Start at login** in
+the menu (or run `node hooks-install.js uninstall` in the source folder),
+quit, and delete the app. To remove its data too, delete
 `~/Library/Application Support/ClaudeSessions`.
 
 ## The icon
