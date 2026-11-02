@@ -93,7 +93,7 @@ No payload carries a session title.
    `%LOCALAPPDATA%\ClaudeSessions\reporter\report.js` and points the hooks
    there, since node cannot run a script from inside the packaged app's asar.
 
-## Subagents (0.3.0 spike, Claude Code 2.1.312)
+## Subagents (upstream 0.3.0 spike, Claude Code 2.1.312)
 
 Two `claude -p` runs with a per-run `--settings` file that logged
 `SubagentStart`, `SubagentStop`, tool hooks, `Stop` and `UserPromptSubmit`:

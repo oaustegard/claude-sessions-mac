@@ -151,10 +151,8 @@ Settings, Notifications). A Focus mode can hide them too.
   `<session>/subagents/agent-<id>.meta.json` next to the transcript; the
   app reads it to correct the description, type and nesting. A run with no
   description is not listed, which keeps out the agents Claude Code runs for
-  its own features. Stop lists the background agents still in flight, so a
-  run missing from it is finished; a stopped background agent reports back
-  as a `<task-notification>` with its status. The reporter sends only the
-  task id and status from that notification.
+  its own features, such as prompt suggestions. Details are in
+  `docs/spike-findings.md`.
 - The reporter posts each event to the app on `127.0.0.1`, with the port and
   a per-run token from `server.json`. When the app is not running it appends
   the event to `spool.jsonl`, which the app reads at start and every 15
@@ -183,15 +181,15 @@ Install, remove or check the hooks from the menu, or from a terminal in a
 source checkout with `node hooks-install.js install`, `uninstall`,
 `status` or `upgrade`.
 
-At start the app runs `upgrade`: when its hooks are installed but an older
-version put them there, it adds the missing events and refreshes the
-reporter copy, with the same backup. It never installs hooks you removed.
-
 The installer copies the reporter to
 `~/Library/Application Support/ClaudeSessions/reporter/` and runs it with an
 absolute `node` path, backs up `settings.json` before each write, writes
 nothing if the file does not parse or changes while it works, and touches
 only hook entries whose path contains `claudesessions/reporter/report.js`.
+
+At start the app runs `upgrade`: when its hooks were installed by an older
+version of the app, it adds the missing events and refreshes the reporter
+copy, backing up `settings.json` first. It never installs hooks you removed.
 
 Claude Code can also raise its own notification (`preferredNotifChannel` in
 its `/config`). If one event gives you two alerts, turn that one off.
