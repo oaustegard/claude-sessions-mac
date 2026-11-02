@@ -41,6 +41,37 @@ function toolSummary(name, input) {
   return clip(typeof v === 'string' ? v : undefined, 80);
 }
 
+const id = (s) => (typeof s === 'string' && s ? s.slice(0, 64) : undefined);
+
+/** Where Claude Code keeps a subagent's meta file, next to the session transcript. */
+function agentMetaPath(transcriptPath, agentId) {
+  if (typeof transcriptPath !== 'string' || !/\.jsonl$/i.test(transcriptPath) || !/^[\w-]+$/.test(agentId || '')) return undefined;
+  return path.join(transcriptPath.replace(/\.jsonl$/i, ''), 'subagents', `agent-${agentId}.meta.json`);
+}
+
+/** A background task reporting back arrives as a prompt; only its id and status leave this process. */
+function taskNotice(prompt) {
+  if (typeof prompt !== 'string' || !prompt.startsWith('<task-notification>')) return undefined;
+  const tag = (name) => {
+    const m = new RegExp(`<${name}>([^<]{1,100})</${name}>`).exec(prompt);
+    return m ? m[1].trim() : undefined;
+  };
+  return { id: id(tag('task-id')), status: id(tag('status')) };
+}
+
+/** The parent's side of a subagent launch: what it asked for and, once known, the agent it got. */
+function spawnInfo(p) {
+  const input = p.tool_input && typeof p.tool_input === 'object' ? p.tool_input : {};
+  const res = p.tool_response && typeof p.tool_response === 'object' ? p.tool_response : {};
+  return {
+    description: clip(input.description, 120),
+    type: id(input.subagent_type),
+    background: res.isAsync === true || input.run_in_background === true,
+    agentId: id(res.agentId),
+    status: id(res.status),
+  };
+}
+
 /** The fields the tray uses. Prompts and replies are clipped; tool input never leaves this process whole. */
 function slim(p, env, ppid, now) {
   const ev = {
@@ -52,15 +83,18 @@ function slim(p, env, ppid, now) {
     pid: Number(env.CLAUDE_PID) || ppid,
     entrypoint: env.CLAUDE_CODE_ENTRYPOINT,
     termProgram: env.TERM_PROGRAM,
-    agentId: typeof p.agent_id === 'string' ? p.agent_id : undefined, // set when a subagent fired it
+    agentId: id(p.agent_id), // set when a subagent fired it
+    agentType: id(p.agent_type),
   };
+  if (ev.agentId) ev.agentMetaPath = agentMetaPath(p.transcript_path, p.agent_id);
   switch (ev.event) {
     case 'SessionStart':
       ev.source = p.source;
       ev.model = p.model;
       break;
     case 'UserPromptSubmit':
-      ev.prompt = clip(p.prompt, 160);
+      ev.taskNotice = taskNotice(p.prompt);
+      if (!ev.taskNotice) ev.prompt = clip(p.prompt, 160);
       break;
     case 'PreToolUse':
     case 'PostToolUse':
@@ -68,6 +102,10 @@ function slim(p, env, ppid, now) {
       ev.tool = p.tool_name;
       ev.toolSummary = toolSummary(p.tool_name, p.tool_input);
       ev.toolUseId = typeof p.tool_use_id === 'string' ? p.tool_use_id.slice(0, 64) : undefined;
+      if (p.tool_name === 'Agent' || p.tool_name === 'Task') ev.spawn = spawnInfo(p);
+      break;
+    case 'SubagentStop':
+      ev.lastMessage = clip(firstLine(p.last_assistant_message), 200);
       break;
     case 'Notification':
       ev.notificationType = p.notification_type;
@@ -77,6 +115,13 @@ function slim(p, env, ppid, now) {
       ev.stopHookActive = !!p.stop_hook_active;
       ev.lastMessage = clip(firstLine(p.last_assistant_message), 200);
       ev.backgroundTasks = Array.isArray(p.background_tasks) ? p.background_tasks.length : 0;
+      if (Array.isArray(p.background_tasks)) {
+        ev.backgroundAgents = p.background_tasks
+          .filter((t) => t && t.type === 'subagent')
+          .map((t) => id(t.id))
+          .filter(Boolean)
+          .slice(0, 50);
+      }
       break;
     case 'StopFailure': {
       const err = p.error !== undefined ? p.error : p.message;
@@ -148,4 +193,4 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { slim, clip, firstLine, toolSummary };
+module.exports = { slim, clip, firstLine, toolSummary, agentMetaPath, taskNotice };

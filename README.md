@@ -108,6 +108,15 @@ The popup is 320 pt wide and follows the system light or dark appearance.
 - The expand button brings the session's terminal forward, and ⋯ opens
   Rename… and Forget. Pointing at a row also shows buttons that copy its
   resume command (`claude --resume <id>`) and open its folder in Finder.
+- A session that runs subagents gets a small branch button next to the
+  expand button. It shows how many runs are still going, or how many there
+  were once all have finished, and turns amber when one is waiting on a
+  permission prompt. Clicking it lists the runs under the row: agent type,
+  description, the tool a running agent is using, and the time, which reads
+  as elapsed time while it runs and "2m ago", "stopped" or "failed" after.
+  A run started by another run sits indented under it. The first five show;
+  "+N more" lists the rest. Finished runs stay listed for 30 minutes.
+  Subagents never play a sound or raise a toast of their own.
 
 ## Sounds
 
@@ -133,8 +142,19 @@ Settings, Notifications). A Focus mode can hide them too.
 
 - Hooks in `~/.claude/settings.json` run `reporter/report.js` on
   SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, Notification,
-  Stop, StopFailure and SessionEnd. They are `async`, so a session never
-  waits for them.
+  Stop, StopFailure, SessionEnd, SubagentStart and SubagentStop. They are
+  `async`, so a session never waits for them.
+- Subagent runs come from SubagentStart and SubagentStop, from the tool
+  hooks a subagent fires (they carry its `agent_id`), and from the parent's
+  `Agent` tool call, which gives the description and whether it runs in the
+  background. A few seconds after a run starts, Claude Code writes
+  `<session>/subagents/agent-<id>.meta.json` next to the transcript; the
+  app reads it to correct the description, type and nesting. A run with no
+  description is not listed, which keeps out the agents Claude Code runs for
+  its own features. Stop lists the background agents still in flight, so a
+  run missing from it is finished; a stopped background agent reports back
+  as a `<task-notification>` with its status. The reporter sends only the
+  task id and status from that notification.
 - The reporter posts each event to the app on `127.0.0.1`, with the port and
   a per-run token from `server.json`. When the app is not running it appends
   the event to `spool.jsonl`, which the app reads at start and every 15
@@ -160,8 +180,12 @@ Settings, Notifications). A Focus mode can hide them too.
 ## Hooks
 
 Install, remove or check the hooks from the menu, or from a terminal in a
-source checkout with `node hooks-install.js install`, `uninstall` or
-`status`.
+source checkout with `node hooks-install.js install`, `uninstall`,
+`status` or `upgrade`.
+
+At start the app runs `upgrade`: when its hooks are installed but an older
+version put them there, it adds the missing events and refreshes the
+reporter copy, with the same backup. It never installs hooks you removed.
 
 The installer copies the reporter to
 `~/Library/Application Support/ClaudeSessions/reporter/` and runs it with an
@@ -206,6 +230,10 @@ every push and pull request.
   last turn.
 - `/clear` starts a new session id, so the session loses its alias, its own
   sound and its mute.
+- A foreground subagent interrupted with Esc shows as stopped once Claude
+  Code reports the session idle or you type the next prompt. A running
+  subagent that sends no event for 30 minutes while its session is idle is
+  taken as stopped.
 - The app is not notarized.
 
 ## License

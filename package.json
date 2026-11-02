@@ -1,7 +1,7 @@
 {
   "name": "claude-sessions-mac",
   "productName": "Claude Sessions",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Menu bar app that tracks running Claude Code terminal sessions on macOS and alerts when one is done or needs you.",
   "main": "main.js",
   "author": "Oskar Austegard (macOS port); Dr. Know How (original Windows app)",

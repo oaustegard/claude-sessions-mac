@@ -120,3 +120,38 @@ test('a Claude Desktop row says so, so its button can name the app', () => {
   const m = popupModel({ sessions, config: config(), now: NOW });
   assert.deepStrictEqual(m.rows.map((r) => [r.key, r.desktop]).sort(), [['1', true], ['2', false]]);
 });
+
+const run = (id, st, extra = {}) => ({ id, state: st, type: 'Explore', description: `Run ${id}`, startedAt: NOW - 300000, ...(st === 'running' || st === 'needs' ? {} : { endedAt: NOW - 60000 }), ...extra });
+const withAgents = (...runs) => Object.fromEntries(runs.map((r) => [r.id, r]));
+
+test('a row with no listable runs has no agents model', () => {
+  const sessions = bySessions(row(1, 'working'), row(2, 'working', { agents: withAgents(run('x', 'running', { description: undefined })) }));
+  const m = popupModel({ sessions, config: config(), now: NOW });
+  assert.deepStrictEqual(m.rows.map((r) => r.agents), [null, null]);
+});
+
+test('the agents model counts open runs and lists them first, nested runs under their parent', () => {
+  const sessions = bySessions(row(1, 'done', { agents: withAgents(
+    run('old', 'done', { endedAt: NOW - 600000 }),
+    run('new', 'stopped', { endedAt: NOW - 60000 }),
+    run('bg', 'running', { type: 'general-purpose', background: true, tool: 'Agent', toolSummary: 'Inner' }),
+    run('kid', 'needs', { parentAgentId: 'bg', startedAt: NOW - 30000 }),
+  ) }));
+  const a = popupModel({ sessions, config: config(), now: NOW }).rows[0].agents;
+  assert.deepStrictEqual(a.items.map((i) => [i.id, i.depth, i.text, i.time]), [
+    ['bg', 0, 'Run bg · Agent', '5m'],
+    ['kid', 1, 'Run kid', 'needs you'],
+    ['new', 0, 'Run new', 'stopped 1m ago'],
+    ['old', 0, 'Run old', '10m ago'],
+  ]);
+  assert.strictEqual(a.running, 2);
+  assert.strictEqual(a.total, 4);
+  assert.strictEqual(a.needs, true);
+  assert.strictEqual(a.title, 'Subagents: 2 running, 2 finished');
+  assert.match(a.items[0].title, /Runs in the background/);
+});
+
+test('ended rows show no agents pill', () => {
+  const sessions = bySessions(row(1, 'ended', { endedAt: NOW - 1000, agents: withAgents(run('a', 'stopped')) }));
+  assert.strictEqual(popupModel({ sessions, config: config(), now: NOW }).rows[0].agents, null);
+});

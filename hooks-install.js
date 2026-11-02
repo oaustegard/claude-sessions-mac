@@ -7,7 +7,7 @@
 // the tray's hooks were in. Nothing is moved aside now, but removing the
 // tray's hooks still puts back whatever that version stashed.
 //
-// CLI: node hooks-install.js install|uninstall|status
+// CLI: node hooks-install.js install|uninstall|status|upgrade
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -16,7 +16,7 @@ const paths = require('./paths');
 const { writeAtomic } = require('./store');
 
 const MARKER = 'claudesessions/reporter/report.js';
-const EVENTS = ['SessionStart', 'UserPromptSubmit', 'PreToolUse', 'PostToolUse', 'Notification', 'Stop', 'StopFailure', 'SessionEnd'];
+const EVENTS = ['SessionStart', 'UserPromptSubmit', 'PreToolUse', 'PostToolUse', 'Notification', 'Stop', 'StopFailure', 'SessionEnd', 'SubagentStart', 'SubagentStop'];
 const HOOK_TIMEOUT_S = 10;
 
 const clone = (o) => JSON.parse(JSON.stringify(o));
@@ -176,11 +176,41 @@ function status(opts = {}) {
   return hookStatus(settings);
 }
 
+/** The node binary an installed hook runs, so an upgrade keeps it. */
+function installedNode(settings) {
+  for (const groups of Object.values((settings && settings.hooks) || {})) {
+    for (const g of Array.isArray(groups) ? groups : []) {
+      const h = g && Array.isArray(g.hooks) && g.hooks.find(isOurs);
+      if (h && typeof h.command === 'string' && /^node(\.exe)?$/i.test(h.command.split(/[\\/]/).pop())) return h.command;
+    }
+  }
+  return null;
+}
+
+/**
+ * Brings an older install up to this version: the event list and the copied
+ * reporter. Does nothing when the hooks were never installed or were removed,
+ * so the tray never adds hooks you took out.
+ */
+function upgrade(opts = {}) {
+  const settingsFile = opts.settingsFile || paths.settingsFile;
+  const reporterDir = opts.reporterDir || paths.reporterDir;
+  const { settings } = readSettings(settingsFile);
+  const s = hookStatus(settings);
+  if (!s.installed && !s.partial) return { upgraded: false, reason: 'not installed' };
+  let copied = null;
+  try { copied = fs.readFileSync(path.join(reporterDir, 'report.js'), 'utf8'); } catch { /* missing: reinstall writes it */ }
+  const bundled = fs.readFileSync(path.join(__dirname, 'reporter', 'report.js'), 'utf8');
+  if (s.installed && copied === bundled) return { upgraded: false, reason: 'current' };
+  const r = install({ ...opts, node: opts.node || installedNode(settings) || undefined });
+  return { upgraded: true, reason: s.partial ? 'events' : 'reporter', settingsChanged: r.changed };
+}
+
 if (require.main === module) {
   const cmd = process.argv[2];
   try {
-    const fn = { install, uninstall, status }[cmd];
-    if (!fn) { console.error('usage: node hooks-install.js install|uninstall|status'); process.exit(2); }
+    const fn = { install, uninstall, status, upgrade }[cmd];
+    if (!fn) { console.error('usage: node hooks-install.js install|uninstall|status|upgrade'); process.exit(2); }
     console.log(JSON.stringify(fn(), null, 2));
   } catch (e) {
     console.error(e.message);
@@ -188,4 +218,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { MARKER, EVENTS, isOurs, applyInstall, applyUninstall, hookStatus, install, uninstall, status, findNode, readSettings };
+module.exports = { MARKER, EVENTS, isOurs, applyInstall, applyUninstall, hookStatus, install, uninstall, status, upgrade, findNode, readSettings };

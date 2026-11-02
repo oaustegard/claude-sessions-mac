@@ -165,6 +165,46 @@ test('a stash left by 0.1.0 survives a reinstall and is put back and deleted on 
   sb.done();
 });
 
+test('upgrade brings a 0.1.0 install up to date and keeps its node', () => {
+  const sb = sandbox(JSON.stringify(realShape(), null, 2) + '\n');
+  const OLD_NODE = '/opt/homebrew/opt/node@20/bin/node';
+  hi.install({ ...sb.opts, node: OLD_NODE });
+  const s = JSON.parse(fs.readFileSync(sb.opts.settingsFile, 'utf8'));
+  delete s.hooks.SubagentStart;
+  delete s.hooks.SubagentStop;
+  fs.writeFileSync(sb.opts.settingsFile, JSON.stringify(s, null, 2) + '\n');
+  fs.writeFileSync(path.join(sb.opts.reporterDir, 'report.js'), '// 0.1.0 reporter\n');
+  assert.strictEqual(hi.status(sb.opts).partial, true);
+
+  const { node, ...opts } = sb.opts;
+  assert.deepStrictEqual(hi.upgrade(opts), { upgraded: true, reason: 'events', settingsChanged: true });
+  assert.deepStrictEqual(hi.status(opts), { installed: true, partial: false, events: hi.EVENTS });
+  const after = JSON.parse(fs.readFileSync(sb.opts.settingsFile, 'utf8'));
+  assert.strictEqual(after.hooks.SubagentStart.at(-1).hooks[0].command, OLD_NODE);
+  assert.notStrictEqual(fs.readFileSync(path.join(sb.opts.reporterDir, 'report.js'), 'utf8'), '// 0.1.0 reporter\n');
+  assert.deepStrictEqual(hi.upgrade(opts), { upgraded: false, reason: 'current' });
+  sb.done();
+});
+
+test('upgrade refreshes an old reporter copy without touching settings', () => {
+  const sb = sandbox(JSON.stringify(realShape(), null, 2) + '\n');
+  hi.install(sb.opts);
+  const before = fs.readFileSync(sb.opts.settingsFile, 'utf8');
+  fs.writeFileSync(path.join(sb.opts.reporterDir, 'report.js'), '// old\n');
+  assert.deepStrictEqual(hi.upgrade(sb.opts), { upgraded: true, reason: 'reporter', settingsChanged: false });
+  assert.strictEqual(fs.readFileSync(sb.opts.settingsFile, 'utf8'), before);
+  sb.done();
+});
+
+test('upgrade never adds hooks that are not installed', () => {
+  const original = JSON.stringify(realShape(), null, 2) + '\n';
+  const sb = sandbox(original);
+  assert.deepStrictEqual(hi.upgrade(sb.opts), { upgraded: false, reason: 'not installed' });
+  assert.strictEqual(fs.readFileSync(sb.opts.settingsFile, 'utf8'), original);
+  assert.strictEqual(sb.backups().length, 0);
+  sb.done();
+});
+
 test('a settings file that does not parse is never written', () => {
   const sb = sandbox('{ "hooks": { broken');
   assert.throws(() => hi.install(sb.opts), /does not parse/);

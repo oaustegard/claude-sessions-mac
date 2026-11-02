@@ -92,3 +92,36 @@ No payload carries a session title.
 6. The hook installer copies the reporter to
    `%LOCALAPPDATA%\ClaudeSessions\reporter\report.js` and points the hooks
    there, since node cannot run a script from inside the packaged app's asar.
+
+## Subagents (0.3.0 spike, Claude Code 2.1.312)
+
+Two `claude -p` runs with a per-run `--settings` file that logged
+`SubagentStart`, `SubagentStop`, tool hooks, `Stop` and `UserPromptSubmit`:
+two parallel background Explore runs, a run that spawned a nested run, and a
+background run stopped with `TaskStop`.
+
+- Order for one spawn: parent `PreToolUse` `Agent` (`description`,
+  `subagent_type`, `run_in_background`), then `SubagentStart` (`agent_id`,
+  `agent_type`) about 0.1 s later. For a background run the parent's
+  `PostToolUse` follows at once with `tool_response.agentId`, `isAsync: true`
+  and `status: "async_launched"`. A foreground run's `PostToolUse` comes when
+  it finishes, with `status: "completed"` and `agentId`.
+- Print mode launched a run without `run_in_background` as async too, so
+  `isAsync` is the truth, not the request.
+- Tool hooks inside a run carry `agent_id` and `agent_type`. A nested spawn's
+  `PreToolUse` `Agent` carries the spawning run's `agent_id`.
+- `<sessionId>/subagents/agent-<id>.meta.json` did not exist at
+  `SubagentStart`; it appeared 0.04 to 6.3 s later. It holds `agentType`,
+  `description`, `toolUseId`, `spawnDepth`, `requestShape`, and
+  `parentAgentId` for a nested run. A description is known sooner from the
+  parent's `Agent` call; the meta file corrects it.
+- `background_tasks[].id` on `Stop` and `SubagentStop` is the agent id, with
+  `type: "subagent"`, `status: "running"`, `description`, `agent_type`.
+- `TaskStop` produced no `SubagentStop`. The parent then got a
+  `UserPromptSubmit` whose prompt is a `<task-notification>` with
+  `<task-id>` (the agent id) and `<status>killed</status>`. A finished run's
+  notification says `<status>completed</status>`.
+- Not covered: Esc during a foreground run (needs an interactive session),
+  and whether internal agents (prompt suggestions, `/btw`) fire
+  `SubagentStart`. Runs stay hidden until a description is known, and an
+  internal agent has no `Agent` call or meta file.

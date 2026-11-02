@@ -29,11 +29,37 @@ function fixtures(now) {
     lastActivity: now - pid * 1000,
     ...extra,
   });
+  const agent = (id, type, description, state, extra = {}) => ({
+    id, type, description, state, startedAt: now - 3 * MIN, ...(state === 'running' || state === 'needs' ? {} : { endedAt: now - 1 * MIN }), ...extra,
+  });
+  const agents = (...runs) => Object.fromEntries(runs.map((r) => [r.id, r]));
   const rows = [
-    base(101, 'shop', 'checkout', { state: 'needs', since: now - 1 * MIN, needsReason: 'Needs permission: Bash', firstPrompt: 'Fix the tax rounding on the checkout page' }),
+    base(101, 'shop', 'checkout', {
+      state: 'needs', since: now - 1 * MIN, needsReason: 'Needs permission: Bash', firstPrompt: 'Fix the tax rounding on the checkout page',
+      agents: agents(agent('s1', 'general-purpose', 'Update the rounding tests', 'needs', { tool: 'Bash' })),
+    }),
     base(102, 'mobile-app', 'main', { state: 'error', since: now - 4 * MIN, error: 'API overloaded (529)' }),
-    base(103, 'ClaudeSessionsTray', 'master', { state: 'done', since: now - 2 * MIN, backgroundTasks: 2 }),
-    base(104, 'docs-site', 'search', { state: 'working', since: now - 6 * MIN, tool: 'Edit', firstPrompt: 'Add a search box to the docs sidebar' }),
+    base(103, 'ClaudeSessionsTray', 'master', {
+      state: 'done', since: now - 2 * MIN, backgroundTasks: 2,
+      agents: agents(
+        agent('c1', 'Explore', 'Map the hook installer', 'running', { background: true, tool: 'Grep', startedAt: now - 4 * MIN }),
+        agent('c2', 'general-purpose', 'Review the popup layout', 'running', { background: true, tool: 'Agent', startedAt: now - 3 * MIN }),
+        agent('c3', 'Explore', 'Find the focus tests', 'running', { parentAgentId: 'c2', tool: 'Read', startedAt: now - 40000 }),
+        agent('c4', 'Plan', 'Check the release steps', 'done', { endedAt: now - 2 * MIN, lastMessage: 'Three steps, all scripted.' }),
+      ),
+    }),
+    base(104, 'docs-site', 'search', {
+      state: 'working', since: now - 6 * MIN, tool: 'Edit', firstPrompt: 'Add a search box to the docs sidebar',
+      agents: agents(
+        agent('d1', 'Explore', 'Find the sidebar component', 'done', { endedAt: now - 5 * MIN }),
+        agent('d2', 'Explore', 'List the search libraries in use', 'done', { endedAt: now - 4 * MIN }),
+        agent('d3', 'Explore', 'Read the docs build config', 'stopped', { endedAt: now - 4 * MIN }),
+        agent('d4', 'Plan', 'Plan the index format', 'done', { endedAt: now - 3 * MIN }),
+        agent('d5', 'code-reviewer', 'Review the draft', 'failed', { endedAt: now - 2 * MIN }),
+        agent('d6', 'Explore', 'Check the theme tokens', 'done', { endedAt: now - 1 * MIN }),
+        agent('d7', 'Explore', 'Look for an existing search hook', 'done', { endedAt: now - 7 * MIN }),
+      ),
+    }),
     base(105, 'inventory', '', { state: 'idle', since: now - 41 * MIN, firstPrompt: 'Why does the order list drop the quantity when an item is added twice from the scanner?' }),
     base(106, 'benchmarks', 'nightly', { state: 'ended', since: now - 3 * MIN, endedAt: now - 3 * MIN }),
   ];
@@ -131,6 +157,10 @@ app.whenReady().then(async () => {
     shots.push({ name: `picker-${theme}`, theme, model: full, action: click('.row .chip-label') });
     shots.push({ name: `tools-${theme}`, theme, model: full, action: rowTools });
   }
+  // Rows in urgency order: 101 needs, 102 error, 103 done, 104 working.
+  const openAgents = all(click('.row:nth-child(3) .agents-pill'), click('.row:nth-child(4) .agents-pill'), click('.row:nth-child(1) .agents-pill'));
+  for (const theme of ['light', 'dark']) shots.push({ name: `agents-${theme}`, theme, model: full, action: openAgents });
+  shots.push({ name: 'agents-all-light', theme: 'light', model: full, action: all(click('.row:nth-child(4) .agents-pill'), click('.row:nth-child(4) .agents-more')) });
   shots.push({ name: 'settings-light', theme: 'light', model: full, action: click('#gear') });
   shots.push({ name: 'rename-dark', theme: 'dark', model: full, action: (win) => win.webContents.send('popup:rename', '103') });
   shots.push({ name: 'empty-dark', theme: 'dark', model: empty });

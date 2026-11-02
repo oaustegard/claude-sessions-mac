@@ -6,6 +6,40 @@ const view = require('./view');
 const sounds = require('./sounds');
 
 const ENDED_SHOWN = 3; // recently ended sessions listed, dimmed, under the live ones
+const AGENT_LINES = 5; // subagent lines shown before "+N earlier"
+
+/** A session's subagent runs for its pill and its expanded list; null when there are none to show. */
+function agentsModel(row, now) {
+  const list = state.agentRuns(row);
+  if (!list.length) return null;
+  const open = list.filter(({ run }) => state.isAgentOpen(run));
+  const items = list.map(({ run, depth }) => {
+    const tip = [
+      `${run.type || 'Agent'}: ${run.description}`,
+      run.background ? 'Runs in the background' : '',
+      run.state === 'running' && run.toolSummary ? `${run.tool}: ${run.toolSummary}` : '',
+      run.lastMessage ? `Last reply: ${run.lastMessage}` : '',
+    ].filter(Boolean).join('\n');
+    return {
+      id: run.id,
+      state: run.state,
+      type: run.type || 'Agent',
+      text: state.agentText(run),
+      time: state.agentTime(run, now),
+      depth: Math.min(depth, 2),
+      title: tip,
+    };
+  });
+  const finished = list.length - open.length;
+  return {
+    total: list.length,
+    running: open.length,
+    needs: open.some(({ run }) => run.state === 'needs'),
+    items,
+    shown: AGENT_LINES,
+    title: `Subagents: ${[open.length ? `${open.length} running` : '', finished ? `${finished} finished` : ''].filter(Boolean).join(', ')}`,
+  };
+}
 
 function rowModel(row, config, catalog, now, dimmed) {
   const alias = (row.sessionId && config.aliases && config.aliases[row.sessionId]) || '';
@@ -27,6 +61,7 @@ function rowModel(row, config, catalog, now, dimmed) {
     dimmed,
     background: state.isBackground(row),
     desktop: row.entrypoint === 'claude-desktop',
+    agents: dimmed ? null : agentsModel(row, now),
   };
 }
 
@@ -78,4 +113,4 @@ function soundNotice(code) {
   return "Couldn't play that sound";
 }
 
-module.exports = { ENDED_SHOWN, popupModel, focusNotice, soundNotice };
+module.exports = { ENDED_SHOWN, AGENT_LINES, popupModel, focusNotice, soundNotice };

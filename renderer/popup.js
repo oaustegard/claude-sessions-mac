@@ -53,6 +53,8 @@ const copiedIcon = () => icon16('M3.5 8.5l3 3 6-6.5');
 const moreIcon = () => icon16('M3.5 8h.01M8 8h.01M12.5 8h.01');
 const soundOnIcon = () => icon16(`${SPEAKER}M10.5 5.5a3.5 3.5 0 0 1 0 5M12.5 3.5a6.3 6.3 0 0 1 0 9`, 'sound-on');
 const soundOffIcon = () => icon16(`${SPEAKER}M10.5 6l4 4M14.5 6l-4 4`, 'sound-off');
+const agentsIcon = () => icon16('M4 2.5v8a2 2 0 0 0 2 2h6.5M4 7h8.5');
+const chevronIcon = () => icon16('M6 4l4 4-4 4', 'chev');
 
 function setText(node, text) {
   if (node.textContent !== text) node.textContent = text;
@@ -138,8 +140,11 @@ function makeRow(key) {
   const expand = tool('expand', expandIcon(), () => showWindow(key));
   const more = tool('more', moreIcon(), () => api.rowMenu(key));
   more.title = 'More';
+  const agentsCount = el('span', 'agents-count');
+  const agentsBtn = tool('agents-pill', agentsIcon(), () => toggleAgents(key));
+  agentsBtn.append(agentsCount, chevronIcon());
   const tools = el('div', 'row-tools');
-  tools.append(copy, folder, expand, more);
+  tools.append(copy, folder, agentsBtn, expand, more);
 
   const top = el('div', 'row-top');
   top.append(title, tools);
@@ -167,8 +172,101 @@ function makeRow(key) {
   bottom.append(line, chip);
 
   body.append(top, bottom);
-  node.append(dot, body);
-  return { node, dot, title, where, name, line, copy, folder, expand, chip, mute, chipLabel, chipText, play, copiedTimer: 0 };
+
+  // The subagent list wraps onto its own line under the row's two lines.
+  const agents = el('div', 'row-agents');
+  const agentList = el('div', 'agent-list');
+  agentList.setAttribute('role', 'list');
+  const agentsMore = el('button', 'agents-more');
+  agentsMore.addEventListener('click', () => toggleAllAgents(key));
+  agents.append(agentList, agentsMore);
+
+  node.append(dot, body, agents);
+  return {
+    node, dot, title, where, name, line, copy, folder, expand, chip, mute, chipLabel, chipText, play, copiedTimer: 0,
+    agentsBtn, agentsCount, agents, agentList, agentsMore, agentNodes: new Map(),
+  };
+}
+
+// ---------------------------------------------------------------- subagents
+
+const expanded = new Set();  // rows whose subagent list is open, until the tray restarts
+const allAgents = new Set(); // rows showing every run, not just the first few
+const AGENT_DOT = { running: 'working', needs: 'needs', done: 'done', failed: 'error', stopped: 'ended' };
+
+function toggleAgents(key) {
+  if (expanded.has(key)) {
+    expanded.delete(key);
+    allAgents.delete(key);
+  } else {
+    expanded.add(key);
+  }
+  refreshRow(key);
+  reportHeight();
+}
+
+function toggleAllAgents(key) {
+  if (allAgents.has(key)) allAgents.delete(key);
+  else allAgents.add(key);
+  refreshRow(key);
+  reportHeight();
+}
+
+function makeAgentLine() {
+  const node = el('div', 'agent');
+  node.setAttribute('role', 'listitem');
+  const dot = el('span', 'dot');
+  const type = el('span', 'agent-type');
+  const text = el('span', 'agent-text');
+  const time = el('span', 'agent-time');
+  node.append(dot, type, text, time);
+  return { node, dot, type, text, time };
+}
+
+function updateAgents(p, r) {
+  const a = r.agents;
+  if (!a) {
+    expanded.delete(r.key);
+    allAgents.delete(r.key);
+  }
+  const open = !!a && expanded.has(r.key);
+  p.agentsBtn.hidden = !a;
+  p.agents.hidden = !open;
+  if (a) {
+    p.agentsBtn.className = `tool agents-pill${a.running ? ' live' : ''}${a.needs ? ' needs' : ''}${open ? ' open' : ''}`;
+    p.agentsBtn.title = `${a.title}. Click to ${open ? 'hide' : 'show'} them`;
+    p.agentsBtn.setAttribute('aria-expanded', String(open));
+    setText(p.agentsCount, String(a.running || a.total));
+  }
+  if (!open) return;
+
+  const all = allAgents.has(r.key);
+  const items = all ? a.items : a.items.slice(0, a.shown);
+  const ids = new Set(items.map((it) => it.id));
+  for (const [id, q] of p.agentNodes) {
+    if (!ids.has(id)) {
+      q.node.remove();
+      p.agentNodes.delete(id);
+    }
+  }
+  items.forEach((it, i) => {
+    let q = p.agentNodes.get(it.id);
+    if (!q) {
+      q = makeAgentLine();
+      p.agentNodes.set(it.id, q);
+    }
+    q.node.className = `agent ${it.state} depth-${it.depth}`;
+    q.dot.className = `dot ${AGENT_DOT[it.state] || 'idle'}`;
+    setText(q.type, it.type);
+    setText(q.text, it.text);
+    setText(q.time, it.time);
+    if (q.node.title !== it.title) q.node.title = it.title;
+    const at = p.agentList.children[i];
+    if (at !== q.node) p.agentList.insertBefore(q.node, at || null);
+  });
+  const hiddenCount = a.items.length - items.length;
+  p.agentsMore.hidden = !hiddenCount && !(all && a.items.length > a.shown);
+  setText(p.agentsMore, all ? 'Show fewer' : `+${hiddenCount} more`);
 }
 
 function updateRow(p, r) {
@@ -197,6 +295,7 @@ function updateRow(p, r) {
   setText(p.chipText, r.sound.label);
   p.chipLabel.title = `${r.sound.label}${r.muted ? ', muted' : ''}. Click to change the sound`;
   p.play.title = `Play ${r.sound.label}`;
+  updateAgents(p, r);
 }
 
 function refreshRow(key) {

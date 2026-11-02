@@ -20,6 +20,7 @@ const { iconSpec, iconPngs, drawIcon, encodePng, COLORS } = require('./tray-icon
 const { createPlayer } = require('./player');
 const { createPopup } = require('./popup');
 const { popupModel, focusNotice, soundNotice } = require('./popup-view');
+const { createMetaLookup } = require('./agent-meta');
 
 // Alerts play from a hidden window that nobody clicks, so it may not wait for a gesture.
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
@@ -50,6 +51,7 @@ let pushQueued = false;
 const timers = [];
 const toasts = new Set(); // a Notification that is garbage-collected loses its click handler
 const saver = store.stateSaver(paths.stateFile);
+const metaLookup = createMetaLookup();
 
 function log(...parts) {
   const line = `${new Date().toISOString()} ${parts.map((p) => (p instanceof Error ? p.stack : String(p))).join(' ')}\n`;
@@ -84,6 +86,8 @@ function runEffect(fx) {
     labelsFor(fx.cwd)
       .then((l) => dispatch({ type: 'labels', pid: fx.pid, cwd: fx.cwd, project: l.project, branch: l.branch }))
       .catch((e) => log('labels failed', fx.cwd, e));
+  } else if (fx.type === 'needAgentMeta') {
+    metaLookup(`${fx.pid}:${fx.agentId}`, fx.path, (meta) => dispatch({ type: 'agentMeta', pid: fx.pid, agentId: fx.agentId, meta }));
   }
 }
 
@@ -480,6 +484,12 @@ async function start() {
   if (app.dock) app.dock.hide();
 
   sessions = state.pruneLoaded(store.loadState(paths.stateFile), Date.now());
+  try {
+    const up = hooks.upgrade();
+    if (up.upgraded) log('hooks upgraded', JSON.stringify(up));
+  } catch (e) {
+    log('hooks upgrade failed', e);
+  }
   refreshHookState();
   rebuildCatalog();
   player = createPlayer({ fileFor: (id) => sounds.findSound(catalog, id)?.file, log });
