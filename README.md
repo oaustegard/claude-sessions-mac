@@ -29,36 +29,68 @@ with a token, and nothing is sent anywhere else.
 
 ## Install
 
+There is no prebuilt app. Each release is the tagged source, and you build
+the app on your own Mac.
+
 You need:
 
 - macOS 11 or later, on Apple Silicon or Intel.
 - [Claude Code](https://github.com/anthropics/claude-code), run in a terminal.
-- [Node.js](https://nodejs.org/). The hooks run a small Node script. The app
-  looks for `node` in `/opt/homebrew/bin`, `/usr/local/bin` and `/usr/bin`,
-  then asks your login shell, which covers nvm and similar.
+- [Node.js](https://nodejs.org/) with npm. CI builds and tests with Node 22;
+  use that or later. The hooks also run a small Node script. The app looks
+  for `node` in `/opt/homebrew/bin`, `/usr/local/bin` and `/usr/bin`, then
+  asks your login shell, which covers nvm and similar.
 
-Build the app from source (there is no signed release yet):
+### Get the source
+
+Clone the repository, or download "Source code (zip)" from the
+[latest release](https://github.com/oaustegard/claude-sessions-mac/releases/latest)
+and unpack it. In a terminal:
 
 ```bash
-npm install
+git clone https://github.com/oaustegard/claude-sessions-mac.git
+cd claude-sessions-mac
 ```
+
+### Build and install
 
 ```bash
-npm run dist
+npm install        # downloads Electron and the build tools
+npm test           # optional: runs the unit tests
+npm run dist       # builds the app into dist/
 ```
 
-Then open `dist/Claude Sessions-<version>-arm64.dmg` (on Intel,
-`dist/Claude Sessions-<version>.dmg`) and drag the app to Applications. The app is signed ad hoc, not with a
-Developer ID, so the first open is blocked: right-click the app, choose
-**Open**, then **Open** again. On recent macOS you may instead have to allow
-it under System Settings, Privacy & Security.
+`npm run dist` writes a DMG and a zip for each architecture to `dist/`:
+`Claude Sessions-<version>-arm64.dmg` for Apple Silicon and
+`Claude Sessions-<version>.dmg` for Intel. Open the one for your Mac and
+drag the app to Applications. To skip the DMG, copy the app from
+`dist/mac-arm64/` (Apple Silicon) or `dist/mac/` (Intel) instead:
 
-Then:
+```bash
+cp -R "dist/mac-arm64/Claude Sessions.app" /Applications/   # Intel: dist/mac/
+open "/Applications/Claude Sessions.app"
+```
+
+The build signs the app ad hoc, not with a Developer ID. If macOS blocks
+the first open, right-click the app, choose **Open**, then **Open** again,
+or allow it under System Settings, Privacy & Security.
+
+To try the app without building it, run `npm start` in the source folder.
+It runs until you quit it from the menu.
+
+### Upgrade
+
+Quit the running app from its menu, build the new version as above, and
+replace the app in Applications. At start the new version updates the hooks
+an older version installed, so you do not need to reinstall them.
+
+### First run
 
 1. The menu bar icon starts as a gray square with `!`, which means the hooks
    are not installed yet. Right-click it and choose **Install hooks into
    Claude Code**. Sessions that are already running pick up the hooks
-   without a restart.
+   without a restart. From a terminal, `node hooks-install.js install` in the
+   source folder does the same.
 2. Turn on **Start at login** in the same menu if you want the app to start
    when you log in. It is off until you turn it on.
 3. The first time you click a session that runs in Terminal or iTerm2,
